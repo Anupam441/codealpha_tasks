@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URL Shortener | CodeAlpha</title>
+<style>
+  :root { --bg:#f5f6fa; --card:#fff; --text:#1f2430; --muted:#6b7280; --accent:#4f46e5; --border:#e2e5ee; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12141a; --card:#1c1f28; --text:#eceef4; --muted:#9aa1b2; --accent:#818cf8; --border:#2c303c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:28px; width:100%; max-width:520px; }
+  h1 { margin:0 0 4px; font-size:1.5rem; }
+  p.sub { margin:0 0 20px; color:var(--muted); font-size:.95rem; }
+  input { width:100%; padding:12px; margin-bottom:10px; border:1px solid var(--border); border-radius:8px;
+          background:transparent; color:var(--text); font-size:1rem; }
+  button { width:100%; padding:12px; border:0; border-radius:8px; background:var(--accent); color:#fff;
+           font-size:1rem; cursor:pointer; }
+  button:disabled { opacity:.6; }
+  #result { margin-top:18px; display:none; }
+  .row { display:flex; gap:8px; }
+  .row input { margin:0; }
+  .row button { width:auto; padding:12px 16px; }
+  #msg { margin-top:12px; font-size:.9rem; color:#dc2626; min-height:1.2em; }
+  #stats { color:var(--muted); font-size:.85rem; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔗 URL Shortener</h1>
+  <p class="sub">Paste a long link and get a short one.</p>
+  <input id="url" type="text" placeholder="https://example.com/very/long/link" autofocus>
+  <input id="custom" type="text" placeholder="Custom code (optional)">
+  <button id="btn" onclick="shorten()">Shorten</button>
+  <div id="msg"></div>
+  <div id="result">
+    <div class="row">
+      <input id="short" readonly>
+      <button onclick="copyLink()" id="copyBtn">Copy</button>
+    </div>
+    <div id="stats"></div>
+  </div>
+</div>
+<script>
+async function shorten() {
+  const btn = document.getElementById('btn'), msg = document.getElementById('msg');
+  msg.textContent = ''; btn.disabled = true;
+  try {
+    const res = await fetch('/api/shorten', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        url: document.getElementById('url').value,
+        custom_code: document.getElementById('custom').value
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) { msg.textContent = data.error || 'Something went wrong.'; document.getElementById('result').style.display='none'; return; }
+    document.getElementById('short').value = data.short_url;
+    document.getElementById('stats').textContent = 'Stats: /api/stats/' + data.short_code;
+    document.getElementById('result').style.display = 'block';
+  } catch (e) {
+    msg.textContent = 'Server not reachable.';
+  } finally { btn.disabled = false; }
+}
+async function copyLink() {
+  const input = document.getElementById('short');
+  try { await navigator.clipboard.writeText(input.value); } catch (e) { input.select(); document.execCommand('copy'); }
+  const b = document.getElementById('copyBtn'); b.textContent = 'Copied!';
+  setTimeout(() => b.textContent = 'Copy', 1500);
+}
+document.getElementById('url').addEventListener('keydown', e => { if (e.key === 'Enter') shorten(); });
+</script>
+</body>
+</html>
